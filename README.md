@@ -13,11 +13,12 @@ picking this project back up after a break.
 ## Requirements
 
 ```bash
-pip install requests beautifulsoup4 Pillow --user
+pip install -r requirements.txt --user
 ```
 
 `Pillow` is optional (thumbnails won't display in the GUI without it,
-but everything else works fine).
+but everything else works fine) -- it's included in `requirements.txt`
+and can be omitted if you prefer a minimal install.
 
 Tkinter is required and is usually available as a system package:
 

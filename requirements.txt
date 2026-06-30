@@ -1,0 +1,13 @@
+# Core dependencies (required)
+requests>=2.28.0
+beautifulsoup4>=4.11.0
+
+# Optional: enables thumbnail display in the GUI selection screen.
+# Everything works without it -- thumbnails just show as gray
+# placeholders. Install with: pip install Pillow
+Pillow>=9.0.0
+
+# Standard library only beyond the above -- no additional packages
+# needed for tkinter (GUI), xml.etree.ElementTree (OCS XML parsing),
+# tarfile/zipfile (archive extraction), configparser (metadata
+# reading), or threading/queue (background worker threads).
