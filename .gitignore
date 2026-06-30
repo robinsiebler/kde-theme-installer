@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Local test cache created by tests/smoke_test_fetch_and_extract.py
+test_cache/
+
+# Real downloaded/extracted theme content if run from the project root
+cache/
