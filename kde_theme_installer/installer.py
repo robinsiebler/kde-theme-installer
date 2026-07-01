@@ -86,6 +86,7 @@ INSTALL_SUBPATH_BY_TYPEID: dict[str, str] = {
     "717": "aurorae/themes",            # Plasma 6 Window Decorations
     "462": "konsole",                   # Konsole Color Schemes
     "299": "wallpapers",                # Wallpapers KDE Plasma
+    "184": "yakuake/kns_skins",         # Yakuake Skins
     # Fonts: typeid not yet confirmed (see design doc open question).
     # Left out deliberately so an attempt to install one raises a
     # clear error rather than silently guessing a wrong path.

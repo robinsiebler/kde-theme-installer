@@ -163,6 +163,7 @@ content from the Magna description set:
 | 717    | Plasma 6 Window Decorations (Aurorae) | auto-install |
 | 462    | Konsole Color Schemes        | auto-install (flat-file) |
 | 299    | Wallpapers KDE Plasma        | auto-install        |
+| 184    | Yakuake Skins                | auto-install (to ~/.local/share/yakuake/kns_skins/) |
 | 123    | Kvantum                      | auto-install (to ~/.config/Kvantum/) |
 | 101    | SDDM Login Themes            | download only -- use scripts/install_sddm_theme.py |
 | 135    | GTK3/4 Themes                | download only -- copy manually to ~/.local/share/themes/ |

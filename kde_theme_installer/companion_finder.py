@@ -51,6 +51,7 @@ TYPEID_BUCKETS: dict[str, str] = {
     "717": BUCKET_AUTO_INSTALL,  # Plasma 6 Window Decorations (Aurorae)
     "462": BUCKET_AUTO_INSTALL,  # Konsole Color Schemes
     "299": BUCKET_AUTO_INSTALL,  # Wallpapers KDE Plasma
+    "184": BUCKET_AUTO_INSTALL,  # Yakuake Skins -- ~/.local/share/yakuake/kns_skins/
     "123": BUCKET_AUTO_INSTALL,  # Kvantum -- installs to ~/.config/Kvantum/
                                  # (XDG_CONFIG_HOME, not XDG_DATA_HOME like
                                  # everything else; handled specially in
