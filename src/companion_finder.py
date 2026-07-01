@@ -41,19 +41,19 @@ BUCKET_UNKNOWN = "unknown"
 
 TYPEID_BUCKETS: dict[str, str] = {
     "722": BUCKET_AUTO_INSTALL,  # Global Themes (Plasma 6)
-    "716": BUCKET_AUTO_INSTALL,  # Plasma 6 Splashscreens (same install
-                                 # path/packaging as Global Themes --
-                                 # confirmed via web search, real-world
-                                 # discovered while testing Amy-Light)
+    "716": BUCKET_AUTO_INSTALL,  # Plasma 6 Splashscreens
     "104": BUCKET_AUTO_INSTALL,  # Plasma Themes
     "112": BUCKET_AUTO_INSTALL,  # Plasma Color Schemes
     "132": BUCKET_AUTO_INSTALL,  # Full Icon Themes
     "717": BUCKET_AUTO_INSTALL,  # Plasma 6 Window Decorations (Aurorae)
     "462": BUCKET_AUTO_INSTALL,  # Konsole Color Schemes
     "299": BUCKET_AUTO_INSTALL,  # Wallpapers KDE Plasma
+    "123": BUCKET_AUTO_INSTALL,  # Kvantum -- installs to ~/.config/Kvantum/
+                                 # (XDG_CONFIG_HOME, not XDG_DATA_HOME like
+                                 # everything else; handled specially in
+                                 # installer.py)
     "101": BUCKET_DOWNLOAD_ONLY,  # SDDM Login Themes
     "135": BUCKET_DOWNLOAD_ONLY,  # GTK3/4 Themes
-    "123": BUCKET_DOWNLOAD_ONLY,  # Kvantum
     "121": BUCKET_INCOMPATIBLE,   # Global Themes (Plasma 5) -- incompatible
                                   # with Plasma 6; never install or download
     "114": BUCKET_INCOMPATIBLE,   # Plasma Window Decorations (Plasma 5 Aurorae)

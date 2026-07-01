@@ -328,8 +328,8 @@ class App:
             text=(
                 "Everything below will be downloaded. Checked items will "
                 "also be installed to the correct system location. "
-                "Items KDE Plasma can't auto-install yet (SDDM, GTK, "
-                "Kvantum) are downloaded only -- you can install those "
+                "Items KDE Plasma can't auto-install yet (SDDM, GTK) "
+                "are downloaded only -- you can install those "
                 "by hand later from the downloads folder."
             ),
             wraplength=700, justify=LEFT, fg="#555",

@@ -42,6 +42,7 @@ MAGNA_VIOLET_COLORSCHEME_ID = "2102231"   # typeid 112, flat-file
 MAGNA_DARK_KONSOLE_ID = "2102220"         # typeid 462, flat-file
 MAGNA_DARK_PLASMA_ID = "2102246"          # typeid 104, folder-based
 MAGNA_AURORAE_ID = "2134193"              # typeid 717, folder-based
+MAGNA_KVANTUM_ID = "2102245"              # typeid 123, ~/.config/Kvantum/
 
 CACHE_DIR = Path("./test_cache")
 
@@ -139,10 +140,25 @@ def main():
             lambda r: r.install_path.parent == FAKE_XDG_DATA_HOME / "aurorae" / "themes"),
     ])
 
+    # --- Kvantum (XDG_CONFIG_HOME, not XDG_DATA_HOME) ---
+    entry = ocs_client.get_content(MAGNA_KVANTUM_ID, provider_base=provider_base)
+    fake_config = FAKE_XDG_DATA_HOME.parent / "fake_config_home"
+    os.environ["XDG_CONFIG_HOME"] = str(fake_config)
+    all_pass &= run_one("Kvantum (XDG_CONFIG_HOME-based)", entry, [
+        ("install_path is a directory",
+            lambda r: r.install_path.is_dir()),
+        ("installed under ~/.config/Kvantum/, NOT ~/.local/share/",
+            lambda r: r.install_path.parent == fake_config / "Kvantum"),
+        (".kvconfig or .svg file present inside install_path",
+            lambda r: any(r.install_path.glob("*.kvconfig")) or
+                      any(r.install_path.glob("*.svg"))),
+    ])
+
     print("=" * 60)
     print(f"RESULT: {'ALL PASS' if all_pass else 'SOME FAILED'}")
-    print(f"Inspect results under: {FAKE_XDG_DATA_HOME}")
-    print(f"Clean up with: rm -rf {FAKE_XDG_DATA_HOME} {CACHE_DIR}")
+    print(f"Inspect XDG_DATA_HOME results under: {FAKE_XDG_DATA_HOME}")
+    print(f"Inspect XDG_CONFIG_HOME results under: {fake_config}")
+    print(f"Clean up with: rm -rf {FAKE_XDG_DATA_HOME} {fake_config} {CACHE_DIR}")
     print("=" * 60)
 
 
