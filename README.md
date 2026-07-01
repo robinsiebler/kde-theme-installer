@@ -10,15 +10,19 @@ Full design rationale, scope decisions, and the OCS API investigation
 that got us here live in `design_doc.md` -- read that first if you're
 picking this project back up after a break.
 
-## Requirements
+## Installation
 
 ```bash
-pip install -r requirements.txt --user
+pip install git+https://github.com/robinsiebler/kde-theme-installer --user
 ```
 
-`Pillow` is optional (thumbnails won't display in the GUI without it,
-but everything else works fine) -- it's included in `requirements.txt`
-and can be omitted if you prefer a minimal install.
+Or clone and install locally:
+
+```bash
+git clone https://github.com/robinsiebler/kde-theme-installer
+cd kde-theme-installer
+pip install -e . --user
+```
 
 Tkinter is required and is usually available as a system package:
 
@@ -27,17 +31,28 @@ sudo dnf install python3-tkinter   # Nobara/Fedora/RHEL
 sudo apt install python3-tk        # Debian/Ubuntu
 ```
 
-## Running the GUI
+## Running
+
+After installing:
 
 ```bash
-python3 src/gui.py
+kde-theme-installer
 ```
 
-Paste a KDE Store / Pling URL (e.g. `https://store.kde.org/p/2134200`),
-choose a downloads folder, click Fetch, review the selection list, and
-click Download & Install Selected. Everything auto-installs to the
-correct `~/.local/share/...` path per content type -- you don't need
-to know where anything goes.
+Or without installing (from the project root):
+
+```bash
+python3 -m kde_theme_installer.gui
+```
+
+## Requirements
+
+```bash
+pip install -r requirements.txt --user
+```
+
+`Pillow` is optional (thumbnails won't display in preview popups without
+it, but everything else works fine).
 
 ## Folder layout
 

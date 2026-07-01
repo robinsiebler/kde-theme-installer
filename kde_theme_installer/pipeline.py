@@ -26,10 +26,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Optional
 
-import ocs_client
-import companion_finder
-import fetch_and_extract as fe
-import installer
+from . import ocs_client
+from . import companion_finder
+from . import fetch_and_extract as fe
+from . import installer
 
 
 # Progress callback shape: (stage: str, detail: str) -> None

@@ -48,9 +48,9 @@ try:
 except ImportError:
     PIL_AVAILABLE = False
 
-import ocs_client
-import companion_finder
-import pipeline
+from . import ocs_client
+from . import companion_finder
+from . import pipeline
 
 
 APP_TITLE = "KDE Store Theme Installer"
@@ -293,7 +293,7 @@ class App:
         # all of Amy's companions' raw/extracted subfolders together,
         # rather than ~20 companion folders sitting flat alongside
         # whatever the next theme install adds later.
-        from fetch_and_extract import safe_dirname
+        from .fetch_and_extract import safe_dirname
         self.theme_cache_dir = self.downloads_root / safe_dirname(primary_entry.name)
 
         primary_bucket = companion_finder.bucket_for_typeid(primary_entry.typeid)
@@ -660,8 +660,8 @@ class App:
         # single opaque call -- instead we replicate its steps here so
         # we can pass install=True/False per item based on what the
         # user actually checked.
-        from fetch_and_extract import fetch_and_extract, write_manifest, FetchError
-        from installer import install_content, InstallError
+        from .fetch_and_extract import fetch_and_extract, write_manifest, FetchError
+        from .installer import install_content, InstallError
 
         def progress(stage: str, detail: str):
             self.progress_queue.put((stage, detail))
