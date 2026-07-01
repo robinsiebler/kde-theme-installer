@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=KDE Theme Installer
+GenericName=Theme Installer
+Comment=Install themes from the KDE Store with one click
+Exec=kde-theme-installer
+Icon=preferences-desktop-theme
+Categories=Settings;DesktopSettings;Qt;KDE;
+Keywords=theme;kde;plasma;icon;color;scheme;install;store;
+StartupNotify=true
+Terminal=false
