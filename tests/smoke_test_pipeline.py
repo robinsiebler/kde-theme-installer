@@ -17,7 +17,8 @@ real install to your system.
 
 This will make ~22 OCS API calls and download several MB of real
 content (the icon packs in particular) -- expect it to take a minute
-or two.
+or two. Expected result against Magna-Dark-Global-6: 20 installed,
+2 download-only (SDDM, GTK), 0 unknown, 0 failed.
 """
 
 import os
@@ -105,8 +106,10 @@ def main():
               f"items installed correctly")
 
     # Expected shape based on our testing against Magna-Dark-Global-6:
-    # 1 primary + 21 companions = 22 total, 19 auto-install (18
-    # companions + primary), 3 download-only, 0 unknown, 0 failed.
+    # 1 primary + 21 companions = 22 total, 20 auto-install (19
+    # companions + primary -- Kvantum now auto-installs to
+    # ~/.config/Kvantum/), 2 download-only (SDDM, GTK), 0 unknown,
+    # 0 failed.
     print()
     if len(result.unknown_type_items) > 0:
         print("NOTE: unknown-typed items found -- this means we hit a "
