@@ -74,9 +74,10 @@ real KDE Store data:
   companion content links, resolves each via the OCS API, buckets by
   type (auto-install vs. download-only/v2). Known typeids confirmed
   empirically: Global Themes (722), Splashscreens (716), Plasma
-  Themes (104), Color Schemes (112), Icon Themes (132), Window
-  Decorations/Aurorae (717), Konsole Color Schemes (462), Wallpapers
-  (299), SDDM (101), GTK (135), Kvantum (123).
+  Themes (104), Color Schemes (112), Icon Themes (132), Cursors (107),
+  Window Decorations/Aurorae (717), Konsole Color Schemes (462),
+  Wallpapers (299), Yakuake Skins (184), SDDM (101), GTK (135),
+  Kvantum (123).
 - `src/fetch_and_extract.py` -- downloads archives, verifies MD5
   checksums, extracts safely (path traversal guard, absolute symlink
   handling, bare non-archive files). Retries on HTTP 429/5xx.
