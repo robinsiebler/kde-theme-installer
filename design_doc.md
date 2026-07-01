@@ -28,6 +28,19 @@ revert command. This keeps the main tool free of sudo while still
 giving the user a guided path to installing SDDM themes. The summary
 screen shows the exact command to run after a theme install.
 
+IMPORTANT CAVEAT discovered during testing: Plasma Login Manager
+(`plasmalogin`), which Nobara KDE ships by default instead of SDDM,
+does NOT support arbitrary QML themes -- it is fixed to its own
+Breeze-based login screen regardless of any SDDM configuration.
+SDDM themes from the KDE Store therefore have no effect on systems
+using plasmalogin. The install_sddm_theme.py script detects the
+active display manager via `systemctl is-active` and warns the user
+clearly before doing anything if SDDM is not the active DM. SDDM
+themes are still downloaded to the cache (they may be useful to users
+on other distros that do use SDDM -- Arch, openSUSE, etc.) but the
+summary screen and GUI description both note that installing requires
+SDDM to be active.
+
 ## 2. Data source: the OCS API
 
 KDE Store content runs on the OCS (Open Collaboration Services)

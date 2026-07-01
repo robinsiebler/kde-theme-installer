@@ -102,6 +102,17 @@ KWin (Aurorae decorations).
   The script validates the theme, backs up your config, copies files
   with sudo, writes a drop-in at `/etc/sddm.conf.d/`, and prints the
   exact revert command. Does NOT restart SDDM automatically.
+
+  **Important:** SDDM themes only work if your system uses SDDM as its
+  display manager. If you use **Plasma Login Manager** (`plasmalogin`)
+  -- which Nobara KDE ships by default -- SDDM themes have no effect.
+  Plasma Login Manager does not support arbitrary QML themes and is
+  fixed to its own Breeze-based login screen. The script detects your
+  display manager and warns you before doing anything if SDDM is not
+  active. Check which DM you're running with:
+  ```bash
+  systemctl status display-manager
+  ```
 - **GTK themes** -- files are downloaded. Install manually by copying
   the extracted folder to `~/.local/share/themes/` or `~/.themes/`.
   The summary screen shows the extracted path after a run.

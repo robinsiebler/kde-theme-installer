@@ -21,6 +21,13 @@ Why is this a separate script and not part of the main installer?
   - This script is intentionally separate so you can review it,
     understand what it does, and run it consciously rather than having
     it happen automatically as part of a batch install.
+  - IMPORTANT: This script only works if your system uses SDDM as its
+    display manager. If you are running Plasma Login Manager
+    (plasmalogin) -- which Nobara KDE ships by default -- SDDM themes
+    have no effect. Plasma Login Manager does not support arbitrary QML
+    themes and is fixed to its own Breeze-based login screen.
+    This script will detect your display manager and warn you before
+    doing anything if SDDM is not active.
 
 What this script does:
   1. Validates the theme folder looks like a real SDDM theme
@@ -182,6 +189,39 @@ def write_config(theme_name: str):
     print(f"Config written to {SDDM_CONF_DIR / CONF_FILE_NAME}")
 
 
+def detect_display_manager() -> tuple[str, bool]:
+    """
+    Detect which display manager is currently active.
+    Returns (name, is_sddm) where name is a human-readable string and
+    is_sddm is True only if SDDM is definitely the active DM.
+
+    Uses systemctl to check which service is running -- this is more
+    reliable than checking symlinks in /etc/systemd/system/ since it
+    reflects the actual runtime state.
+    """
+    known_dms = {
+        "sddm": ("SDDM", True),
+        "plasmalogin": ("Plasma Login Manager (plasmalogin)", False),
+        "gdm": ("GDM (GNOME Display Manager)", False),
+        "lightdm": ("LightDM", False),
+        "ly": ("Ly", False),
+        "greetd": ("greetd", False),
+    }
+
+    for service, (label, is_sddm) in known_dms.items():
+        try:
+            result = subprocess.run(
+                ["systemctl", "is-active", f"{service}.service"],
+                capture_output=True, text=True, check=False,
+            )
+            if result.stdout.strip() == "active":
+                return label, is_sddm
+        except FileNotFoundError:
+            pass  # systemctl not available
+
+    return "unknown", False
+
+
 def main():
     if len(sys.argv) != 2 or sys.argv[1] in ("-h", "--help"):
         print(__doc__)
@@ -189,9 +229,45 @@ def main():
 
     theme_path = Path(sys.argv[1]).expanduser().resolve()
 
-    print(f"SDDM theme install helper")
+    print("SDDM theme install helper")
     print(f"Theme path: {theme_path}")
     print()
+
+    # Check the active display manager before doing anything else --
+    # SDDM themes only work if SDDM is actually running the login
+    # screen. Plasma Login Manager (plasmalogin), which Nobara KDE
+    # ships instead of SDDM, does NOT support arbitrary QML themes
+    # and is fixed to its own Breeze-based theme regardless of any
+    # SDDM configuration. Installing an SDDM theme on a plasmalogin
+    # system has no visible effect.
+    dm_name, is_sddm = detect_display_manager()
+    print(f"Active display manager: {dm_name}")
+
+    if not is_sddm:
+        print()
+        print("=" * 60)
+        print("WARNING: Your system is not using SDDM.")
+        print()
+        if "plasmalogin" in dm_name.lower():
+            print("You are using Plasma Login Manager (plasmalogin).")
+            print("Plasma Login Manager does NOT support arbitrary QML")
+            print("themes -- it is fixed to its own Breeze-based theme")
+            print("regardless of any SDDM configuration.")
+            print()
+            print("SDDM themes from the KDE Store cannot be applied to")
+            print("your login screen. The downloaded theme files are in")
+            print("your cache folder for reference, but installing them")
+            print("via this script will have no visible effect.")
+        else:
+            print(f"Your display manager ({dm_name}) is not SDDM.")
+            print("This script configures SDDM themes only. Installing")
+            print("an SDDM theme will have no effect on your login screen.")
+        print()
+        answer = input("Proceed anyway? [y/N] ").strip().lower()
+        if answer != "y":
+            print("Aborted.")
+            sys.exit(0)
+        print()
 
     theme_name = validate_sddm_theme(theme_path)
     display_name = read_display_name(theme_path, theme_name)
