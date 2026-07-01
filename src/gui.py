@@ -328,9 +328,10 @@ class App:
             text=(
                 "Everything below will be downloaded. Checked items will "
                 "also be installed to the correct system location. "
-                "Items KDE Plasma can't auto-install yet (SDDM, GTK) "
-                "are downloaded only -- you can install those "
-                "by hand later from the downloads folder."
+                "Items that can't be auto-installed (SDDM, GTK) are "
+                "downloaded only -- see the summary screen for install "
+                "instructions, or use scripts/install_sddm_theme.py "
+                "for SDDM themes."
             ),
             wraplength=700, justify=LEFT, fg="#555",
         ).pack(anchor=W, pady=(4, 0))
