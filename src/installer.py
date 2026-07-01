@@ -59,6 +59,14 @@ def xdg_data_home() -> Path:
     return Path.home() / ".local" / "share"
 
 
+def xdg_config_home() -> Path:
+    """Respect $XDG_CONFIG_HOME if set, otherwise the standard default."""
+    env_value = os.environ.get("XDG_CONFIG_HOME")
+    if env_value:
+        return Path(env_value)
+    return Path.home() / ".config"
+
+
 # typeid -> path relative to XDG_DATA_HOME. Matches the table in design
 # doc section 4. Only typeids present in companion_finder.TYPEID_BUCKETS
 # as BUCKET_AUTO_INSTALL should ever be looked up here -- anything else
@@ -80,6 +88,20 @@ INSTALL_SUBPATH_BY_TYPEID: dict[str, str] = {
     # doc open question). Left out deliberately so an attempt to
     # install one raises a clear error rather than silently guessing
     # a wrong path.
+}
+
+# typeids that install under XDG_CONFIG_HOME rather than XDG_DATA_HOME.
+# Kvantum is the only known case -- its themes go in ~/.config/Kvantum/
+# rather than ~/.local/share/... like everything else. These typeids
+# must NOT appear in INSTALL_SUBPATH_BY_TYPEID (which is XDG_DATA_HOME-
+# relative) -- install_content branches on this set first.
+CONFIG_HOME_INSTALL_SUBPATH_BY_TYPEID: dict[str, str] = {
+    "123": "Kvantum",  # Kvantum themes -- ~/.config/Kvantum/<theme-name>/
+                       # Folder-based install (same pattern as Global Themes/
+                       # Aurorae). A valid Kvantum theme folder must contain
+                       # $THEME_NAME.kvconfig and/or $THEME_NAME.svg.
+                       # Kvantum Manager will auto-detect it there and show
+                       # it in the "Change/Delete Theme" dropdown.
 }
 
 # typeids that must be installed as loose file(s) DIRECTLY inside
@@ -105,6 +127,21 @@ FLAT_FILE_TYPEIDS: set[str] = {
 
 def install_subpath_for_typeid(typeid: str) -> Optional[str]:
     return INSTALL_SUBPATH_BY_TYPEID.get(typeid)
+
+
+def install_base_for_typeid(typeid: str) -> Optional[Path]:
+    """
+    Return the full base install directory for a given typeid, handling
+    both XDG_DATA_HOME types (the majority) and XDG_CONFIG_HOME types
+    (Kvantum). Returns None if the typeid isn't in either table --
+    callers should treat that as an InstallError rather than guessing.
+    """
+    if typeid in CONFIG_HOME_INSTALL_SUBPATH_BY_TYPEID:
+        return xdg_config_home() / CONFIG_HOME_INSTALL_SUBPATH_BY_TYPEID[typeid]
+    subpath = INSTALL_SUBPATH_BY_TYPEID.get(typeid)
+    if subpath:
+        return xdg_data_home() / subpath
+    return None
 
 
 def _find_content_root(extracted_dir: Path) -> Path:
@@ -304,14 +341,14 @@ def install_content(
             f"filter by bucket before calling install_content()."
         )
 
-    subpath = install_subpath_for_typeid(entry.typeid)
-    if subpath is None:
+    install_base = install_base_for_typeid(entry.typeid)
+    if install_base is None:
         raise InstallError(
             f"No known install path for typeid {entry.typeid} "
             f"({entry.typename!r}). This typeid is marked auto-install "
-            f"in companion_finder but has no entry in "
-            f"INSTALL_SUBPATH_BY_TYPEID -- these two tables have drifted "
-            f"out of sync and need reconciling."
+            f"in companion_finder but has no entry in either "
+            f"INSTALL_SUBPATH_BY_TYPEID or CONFIG_HOME_INSTALL_SUBPATH_BY_TYPEID "
+            f"-- these tables have drifted out of sync and need reconciling."
         )
 
     if not fetch_result.extracted_dir.exists():
@@ -321,7 +358,6 @@ def install_content(
             f"for this entry first?"
         )
 
-    install_base = xdg_data_home() / subpath
     install_base.mkdir(parents=True, exist_ok=True)
 
     if entry.typeid in FLAT_FILE_TYPEIDS:
