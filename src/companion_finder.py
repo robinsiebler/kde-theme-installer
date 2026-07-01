@@ -45,6 +45,9 @@ TYPEID_BUCKETS: dict[str, str] = {
     "104": BUCKET_AUTO_INSTALL,  # Plasma Themes
     "112": BUCKET_AUTO_INSTALL,  # Plasma Color Schemes
     "132": BUCKET_AUTO_INSTALL,  # Full Icon Themes
+    "107": BUCKET_AUTO_INSTALL,  # Cursors (same install path as icon
+                                 # themes -- ~/.local/share/icons/<name>/
+                                 # with a cursors/ subdirectory inside)
     "717": BUCKET_AUTO_INSTALL,  # Plasma 6 Window Decorations (Aurorae)
     "462": BUCKET_AUTO_INSTALL,  # Konsole Color Schemes
     "299": BUCKET_AUTO_INSTALL,  # Wallpapers KDE Plasma

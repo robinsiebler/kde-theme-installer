@@ -81,13 +81,14 @@ INSTALL_SUBPATH_BY_TYPEID: dict[str, str] = {
     "104": "plasma/desktoptheme",       # Plasma Themes
     "112": "color-schemes",             # Plasma Color Schemes
     "132": "icons",                     # Full Icon Themes
+    "107": "icons",                     # Cursors (same path as icon themes;
+                                         # structure is <name>/cursors/ inside)
     "717": "aurorae/themes",            # Plasma 6 Window Decorations
     "462": "konsole",                   # Konsole Color Schemes
     "299": "wallpapers",                # Wallpapers KDE Plasma
-    # Cursor themes and fonts: typeids not yet confirmed (see design
-    # doc open question). Left out deliberately so an attempt to
-    # install one raises a clear error rather than silently guessing
-    # a wrong path.
+    # Fonts: typeid not yet confirmed (see design doc open question).
+    # Left out deliberately so an attempt to install one raises a
+    # clear error rather than silently guessing a wrong path.
 }
 
 # typeids that install under XDG_CONFIG_HOME rather than XDG_DATA_HOME.
