@@ -91,14 +91,25 @@ SDDM, GTK), and downloads all 22 preview thumbnails. Everything
 confirmed showing up correctly in System Settings, Konsole, and
 KWin (Aurorae decorations).
 
-## Not yet built (v2)
+## Not yet built / manual install
 
-- SDDM, GTK, Kvantum install support (files are already downloaded,
-  just not placed into their live locations).
-- Click-to-preview popup before confirming download -- selecting
-  between multiple similar-named items (color schemes, icon packs)
-  currently requires visiting the store to compare visually.
-- Cursor theme and font support (typeids not yet confirmed).
+- **SDDM login themes** -- files are downloaded to the cache folder
+  automatically. Use the helper script to install:
+  ```bash
+  python3 scripts/install_sddm_theme.py \
+      ~/kde-theme-downloads/<Theme>/<SDDM-item>/extracted/<theme-name>
+  ```
+  The script validates the theme, backs up your config, copies files
+  with sudo, writes a drop-in at `/etc/sddm.conf.d/`, and prints the
+  exact revert command. Does NOT restart SDDM automatically.
+- **GTK themes** -- files are downloaded. Install manually by copying
+  the extracted folder to `~/.local/share/themes/` or `~/.themes/`.
+  The summary screen shows the extracted path after a run.
+- **Fonts** -- typeid not yet confirmed; no themes found that link to
+  fonts as companions. Will be added once a real example is found.
+- **Click-to-preview before downloading** -- the preview popup works
+  after fetch but before the download/install confirmation. A true
+  "preview before even fetching metadata" flow is a future addition.
 
 ## Running the smoke tests
 

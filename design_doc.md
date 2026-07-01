@@ -19,6 +19,15 @@ different install mechanisms (system paths, sudo, or a separate
 theming subsystem) and don't fit the "drop files, multi-install
 safely" model the rest of this tool relies on.
 
+SDDM specifically: files are downloaded to the cache folder like
+everything else, but a separate helper script
+(`scripts/install_sddm_theme.py`) handles the sudo steps -- copying
+to `/usr/share/sddm/themes/`, writing a drop-in config at
+`/etc/sddm.conf.d/kde-theme-installer.conf`, and printing the exact
+revert command. This keeps the main tool free of sudo while still
+giving the user a guided path to installing SDDM themes. The summary
+screen shows the exact command to run after a theme install.
+
 ## 2. Data source: the OCS API
 
 KDE Store content runs on the OCS (Open Collaboration Services)
@@ -133,28 +142,30 @@ content from the Magna description set:
 | typeid | typename                    | install bucket     |
 |--------|------------------------------|---------------------|
 | 722    | Global Themes (Plasma 6)     | auto-install        |
+| 716    | Plasma 6 Splashscreens       | auto-install        |
 | 104    | Plasma Themes                | auto-install        |
-| 112    | Plasma Color Schemes         | auto-install        |
+| 112    | Plasma Color Schemes         | auto-install (flat-file) |
 | 132    | Full Icon Themes             | auto-install        |
+| 107    | Cursors                      | auto-install        |
 | 717    | Plasma 6 Window Decorations (Aurorae) | auto-install |
-| 462    | Konsole Color Schemes        | auto-install        |
-| 299    | Wallpapers KDE Plasma         | auto-install        |
-| (cursor themes — typeid not yet confirmed, likely grouped under or near Icon Themes; verify before assuming) | | auto-install |
-| (fonts — typeid not yet confirmed; none linked from this sample theme) | | auto-install |
-| 101    | SDDM Login Themes            | download only — v2 install |
-| 135    | GTK3/4 Themes                | download only — v2 install |
-| 123    | Kvantum                      | download only — v2 install (see note below) |
+| 462    | Konsole Color Schemes        | auto-install (flat-file) |
+| 299    | Wallpapers KDE Plasma        | auto-install        |
+| 123    | Kvantum                      | auto-install (to ~/.config/Kvantum/) |
+| 101    | SDDM Login Themes            | download only -- use scripts/install_sddm_theme.py |
+| 135    | GTK3/4 Themes                | download only -- copy manually to ~/.local/share/themes/ |
+| 121    | Global Themes (Plasma 5)     | incompatible -- not downloaded |
+| 114    | Plasma Window Decorations (Plasma 5) | incompatible -- not downloaded |
+| 488    | Plasma Splashscreens (Plasma 5) | incompatible -- not downloaded |
+| (fonts) | not yet confirmed; no themes found that link to fonts as companions | TBD |
+
+All typeids above confirmed empirically against real KDE Store content.
+"flat-file" means the actual config file is copied directly into the
+XDG directory with no wrapping subfolder (see implementation note in
+section 5).
 
 (Reminder: "download only" still means fully fetched and extracted
 into the archive/cache folder — see section 3 point 3. The bucket only
 controls whether we additionally copy it into a live XDG path.)
-
-Note on Kvantum: Robin has Kvantum installed, so the only reason it's
-not in the auto-install bucket is that the install location
-(`~/.config/Kvantum/`) hasn't been worked out/tested yet, not a
-"may not apply to this system" concern like with GTK. Good v2
-candidate to tackle early once v1 is stable, since it's otherwise
-identical in risk profile to the rest of the auto-install set.
 
 One lookup (`2102231`, a second color scheme) failed with an SSL
 hostname-mismatch error against `api.kde-look.org` — transient/
@@ -317,115 +328,109 @@ Summary screen:
   - "Magna-Dark-Global-6" installed -> System Settings > Appearance > Global Theme
   - "Magna-Violet-Dark-ColorScheme" installed -> ... > Colors
   - ... etc
-  - "Magna-SDDM-6" downloaded but not installed (v2 feature) -> files at <cache>/Magna-SDDM-6/extracted/
-  - "Magna-Dark-GTK" downloaded but not installed (v2 feature) -> files at <cache>/Magna-Dark-GTK/extracted/
-  - "Magna-Dark-Kvantum" downloaded but not installed (v2 feature) -> files at <cache>/Magna-Dark-Kvantum/extracted/
+  - "Magna-SDDM-6" downloaded but not installed -> files at <cache>/Magna-SDDM-6/extracted/
+                       run: python3 scripts/install_sddm_theme.py <cache>/Magna-SDDM-6/extracted/Magna-SDDM-6
+  - "Magna-Dark-GTK" downloaded but not installed -> copy manually to ~/.local/share/themes/
+  - "Magna-Dark-Kvantum" installed -> ~/.config/Kvantum/Magna-Dark-Kvantum/
 ```
 
-## 7. GUI shape (sketch, not final)
+## 7. GUI shape (as built)
 
-Simple single-window Tkinter app, three-pane flow rather than
-multi-window wizard:
+Single-window Tkinter app, four-screen flow:
 
-- URL input + "Fetch" button at top.
-- Middle: scrollable list of discovered content (primary + all
-  description links), each row showing name/type/checkbox. All items
-  are downloaded regardless of checkbox state; the checkbox controls
-  install only. Auto-install-bucket items pre-checked; download-only
-  (v2) items shown unchecked/disabled with a note that they'll be
-  fetched but not installed, plus a "view on store" link.
-- "Download & Install Selected" button.
-- Bottom: log/status pane showing download/extract progress per item,
-  ending in the summary list described above.
+**Screen 1: URL entry**
+- Theme URL text field (paste any store.kde.org / pling.com /
+  opendesktop.org /p/<id> URL).
+- Downloads folder picker (the one user-configurable path -- everything
+  installs to fixed XDG locations, but raw/extracted archives land here
+  organized as `<downloads-root>/<theme-name>/<companion-name>/raw|extracted/`).
+- Fetch button (disables itself on click to prevent double-submission,
+  re-enables on failure). Fetch runs on a background thread so the UI
+  stays responsive across ~20 OCS API calls.
+
+**Screen 2: Selection list**
+- Scrollable list of the primary theme + all discovered companions.
+  Mousewheel scrolling wired up cross-platform (Linux Button-4/5,
+  Windows/macOS MouseWheel).
+- Each row shows: name (bold), type, a "Click to preview" hint if
+  preview images are available. Clicking anywhere on the row opens
+  the preview popup (see below).
+- Auto-install-bucket items: checkbox pre-checked, cursor changes to
+  hand pointer.
+- Download-only items (SDDM, GTK): checkbox unchecked/disabled,
+  orange warning text, "View on store" link.
+- Incompatible items (Plasma 5 content): red warning text, no
+  checkbox, not downloaded or installed at all.
+- "< Back" and "Download && Install Selected" buttons.
+
+**Preview popup (modal)**
+- Opened by clicking any row that has preview images.
+- Horizontally scrollable gallery showing all `previewpic1..N` images,
+  loaded async (PIL decode off-thread, ImageTk.PhotoImage constructed
+  on main thread -- see threading safety note below).
+- Description text below the gallery, HTML-stripped and readable.
+- "View on Store" link + "Close" button.
+- Multiple popups can be open simultaneously (one per clicked item).
+
+**Screen 3: Progress**
+- Indeterminate progress bar.
+- Scrolling log pane showing `[stage] detail` lines in real time via
+  a `queue.Queue` polled every 150ms from the main thread.
+- Download/install runs entirely on a background thread. Progress
+  polling uses `root.after()` and guards against the race condition
+  where the pipeline finishes and navigates to the summary screen
+  while a poll is still pending (widget-existence check + explicit
+  `after_cancel()` on screen transition).
+
+**Screen 4: Summary**
+- Read-only text widget (left in NORMAL state, not DISABLED, so text
+  is selectable/copyable -- Tkinter's DISABLED state blocks copy).
+- "Copy Summary" button (copies to system clipboard via
+  `root.clipboard_append()`).
+- "Install Another Theme" (resets state, returns to Screen 1,
+  remembers the downloads folder choice).
+- "Quit".
 
 **Install locations are fixed, not user-chosen.** Every content type
-always installs to its correct `~/.local/share/...` subpath (per the
-table in section 4), respecting `$XDG_DATA_HOME` if set. This isn't
-configurable — there's no benefit to letting the user pick a custom
-install location, since System Settings only looks in the standard
-XDG paths.
-
-**The one user-chosen folder is a "downloads archive" location** — a
-plain folder picker, used purely as a local cache/record of everything
-fetched, organized per-theme:
+always installs to its correct XDG subpath, respecting `$XDG_DATA_HOME`
+and `$XDG_CONFIG_HOME` if set. The only user-chosen path is the
+downloads-root folder where raw archives and extracted content are
+cached, organized per theme run:
 
 ```
-<user-chosen-base>/
-  Magna-Dark-Global-6/
-    raw/
-      Magna-Dark-Global-6.tar.gz          (original downloaded archive)
-    extracted/
-      ...                                  (unpacked tree, pre-install)
-    manifest.json                          (what was found, what was
-                                             installed, where, display
-                                             names, timestamps, md5s)
-  Magna-Violet-Dark-ColorScheme/
-    raw/...
-    extracted/...
-    manifest.json
+<downloads-root>/
+  <Theme-Name>/                   one folder per theme install run
+    <PrimaryTheme>/
+      raw/                        original downloaded archive
+      extracted/                  unpacked tree
+      manifest.json               what was installed, where, md5s
+    <CompanionName>/
+      raw/...
+      extracted/...
+      manifest.json
 ```
 
-This gives a clean audit trail and means a theme can be reinstalled or
-inspected later without re-fetching, without that folder being
-involved in the actual install process at all (install always reads
-from `extracted/` and copies to the fixed XDG path; the archive folder
-is bookkeeping, not a working directory Plasma cares about).
-
-**Real bug found via end-to-end usage testing: ImageTk.PhotoImage must
-be constructed on the main thread.** While testing thumbnails against
-a live theme, one out of ~20 real items (Magna-Blur-Dark-Konsole)
-consistently failed to show its thumbnail even though a standalone
-diagnostic confirmed the OCS API had the preview URL, the URL returned
-valid PNG data, and PIL could decode it fine -- ruling out every data-
-layer explanation. The actual cause: `_load_thumbnail_async`'s worker
-thread was constructing the `ImageTk.PhotoImage` itself before handing
-it to the main thread via `root.after()`. Tk is not thread-safe, and
-creating a `PhotoImage` off the main thread is undefined behavior --
-it can silently fail, "usually" happen to work, or corrupt depending
-on timing, which explains why it was flaky/item-dependent rather than
-consistently broken. Fixed by restructuring so the worker thread only
-does the network fetch and PIL decode (`Image.open()` /
-`.thumbnail()` / `.load()` to force eager decoding), and defers the
-actual `ImageTk.PhotoImage()` construction to `_apply_thumbnail`,
-which runs via `root.after(0, ...)` and is therefore guaranteed to
-execute on the main thread. General lesson for any future Tkinter work
-in this codebase: ANY direct Tk/PhotoImage object construction must
-happen on the main thread, even if it looks like "just creating an
-object" rather than an obvious widget mutation -- background threads
-should only ever produce plain Python data (bytes, PIL Images, etc)
-and hand that across via `root.after()`, never Tk objects themselves.
-
-**v2 candidate, discovered from real usage feedback:** the current
-flow shows a small thumbnail per item but only after the selection
-list has rendered (loaded async, one network request per item). A
-better flow would let the user click an item BEFORE confirming
-download/install and see a popup with the full preview gallery
-(`previewpic1..N`, all of which `ocs_client.ContentEntry` already
-captures, not just the first one we currently fetch) so they can make
-an informed choice -- especially useful for picking between several
-similar-sounding options (e.g. multiple color schemes or Konsole
-schemes whose names alone don't convey the visual difference). This is
-a real, separate interaction (a details/preview popup), not a small
-tweak to the current screen, so it's being tracked as a v2 item rather
-than folded into the v1 GUI.
+**Threading safety note (Tkinter).** Any `ImageTk.PhotoImage`
+construction must happen on the main thread -- creating one off a
+worker thread is undefined behavior that silently fails in a
+timing-dependent way. All background threads (fetch worker, pipeline
+worker, preview image loaders) produce plain Python data (bytes, PIL
+Images) and hand results to the main thread via `root.after(0, ...)`.
+This was discovered as a real bug: one out of ~20 thumbnails
+consistently failed to render despite the image data being fine,
+diagnosed via a standalone diagnostic script.
 
 ## 8. Open questions before implementation
 
-0. ~~Base folder vs fixed install paths~~ — resolved: install paths
-   are always the fixed XDG ones; the user only picks where the
-   downloads/extracted-archive cache lives.
-1. ~~Confirm typeid values~~ — mostly resolved (see table in section
-   3). Remaining gaps: cursor theme typeid and font typeid weren't
-   present in our test sample and still need confirming against a
-   theme that links to those specifically. Also re-confirm the one
-   failed lookup (color scheme typeid 112 is already confirmed via a
-   sibling ID, so this is low priority).
-2. Confirm description HTML is "clean enough" across a wider sample —
-   Robin's spot-check of 10-20 pages is a good sign, but worth
-   stress-testing the parser against a few with unusual formatting
-   before assuming it's universal.
-3. Decide on archive format handling — we've seen `.tar.gz` so far;
-   need to confirm whether `.zip` and `.7z` also show up in practice
-   (the OCS `downloadtags`/mimetype field should tell us per-file, so
-   this is a "support multiple, detect from response" problem, not a
-   design blocker).
+0. ~~Base folder vs fixed install paths~~ — resolved.
+1. ~~Confirm typeid values~~ — resolved for all types except fonts
+   (typeid unknown; no themes found that link to fonts as companions).
+   Cursor themes confirmed as typeid 107, installing to
+   `~/.local/share/icons/` same as icon themes. See table in section 3.
+2. ~~Confirm description HTML is "clean enough"~~ — confirmed across
+   many real themes during live testing. Parser handles the common
+   `<br>`-separated list format correctly.
+3. ~~Archive format handling~~ — resolved: `.tar.gz`, `.tar.xz`, and
+   bare non-archive files (e.g. lone `.colors` files) all handled.
+   `.7z` has not been seen in practice; would fall through to the
+   "unknown format / copy as-is" path if encountered.
