@@ -54,7 +54,6 @@ import pipeline
 
 
 APP_TITLE = "KDE Store Theme Installer"
-THUMBNAIL_DISPLAY_SIZE = (96, 64)
 WINDOW_MIN_SIZE = (760, 560)
 
 
@@ -73,7 +72,6 @@ class SelectableItem:
         self.is_incompatible = bucket == companion_finder.BUCKET_INCOMPATIBLE
         self.install_var = IntVar(value=1 if is_auto else 0)
         self.is_editable = is_auto
-        self.thumbnail_image = None  # populated later if/when loaded
 
 
 class App:
@@ -382,33 +380,50 @@ class App:
         row = Frame(parent, pady=6, relief="groove", borderwidth=1)
         row.pack(fill=X, padx=2, pady=3)
 
-        thumb_label = Label(row, width=12, height=4, bg="#ddd")
-        thumb_label.pack(side=LEFT, padx=(6, 10), pady=4)
-        if item.entry.primary_preview_url:
-            self._load_thumbnail_async(item, thumb_label)
+        def open_preview(e=None):
+            if item.entry.preview_image_urls:
+                self._open_preview_popup(item)
+        row.bind("<Button-1>", open_preview)
+        row.configure(cursor="hand2" if item.entry.preview_image_urls else "")
 
-        text_frame = Frame(row)
+        text_frame = Frame(row, padx=10)
         text_frame.pack(side=LEFT, fill=X, expand=True)
+        text_frame.bind("<Button-1>", open_preview)
 
-        Label(
+        name_label = Label(
             text_frame, text=item.label, font=("", 10, "bold"), anchor=W
-        ).pack(anchor=W)
-        Label(
+        )
+        name_label.pack(anchor=W)
+        name_label.bind("<Button-1>", open_preview)
+
+        type_label = Label(
             text_frame, text=item.entry.typename, fg="#666", anchor=W
-        ).pack(anchor=W)
+        )
+        type_label.pack(anchor=W)
+        type_label.bind("<Button-1>", open_preview)
+
+        if item.entry.preview_image_urls:
+            hint = Label(text_frame, text="Click to preview", fg="#888",
+                         font=("", 8), anchor=W)
+            hint.pack(anchor=W)
+            hint.bind("<Button-1>", open_preview)
 
         if item.is_incompatible:
-            Label(
+            warn = Label(
                 text_frame,
                 text="⚠ Incompatible with Plasma 6 -- will not be downloaded or installed.",
                 fg="#a00", anchor=W,
-            ).pack(anchor=W)
+            )
+            warn.pack(anchor=W)
+            warn.bind("<Button-1>", open_preview)
         elif not item.is_editable:
-            Label(
+            dl_label = Label(
                 text_frame,
                 text="Download only -- automatic install not yet supported for this type.",
                 fg="#a60", anchor=W,
-            ).pack(anchor=W)
+            )
+            dl_label.pack(anchor=W)
+            dl_label.bind("<Button-1>", open_preview)
             store_url = item.entry.homepage or f"https://store.kde.org/p/{item.entry.content_id}"
             link = Label(text_frame, text="View on store", fg="#06c", cursor="hand2")
             link.pack(anchor=W)
@@ -422,63 +437,179 @@ class App:
         )
         cb.pack()
 
-    def _load_thumbnail_async(self, item: SelectableItem, label_widget: Label):
-        """Fetch the preview image off-thread (it's a small network
-        call) and swap it into the placeholder label once ready. If
-        PIL isn't available, or the fetch fails, the placeholder just
-        stays as-is -- a missing thumbnail should never block anything.
+    # ---- Preview popup --------------------------------------------------------
 
-        IMPORTANT: ImageTk.PhotoImage() must be constructed on the main
-        thread. Tk is not thread-safe, and creating a PhotoImage off
-        the worker thread is undefined behavior -- it can silently
-        fail, "usually" happen to work, or corrupt depending on timing.
-        This was a real bug found via testing: one out of ~20 real
-        thumbnails (Magna-Blur-Dark-Konsole) consistently failed to
-        render even though the underlying image data was confirmed
-        fine (fetched, decoded, and re-verified via a standalone
-        diagnostic script). That's exactly the kind of flaky,
-        item-dependent symptom a cross-thread Tk call produces -- not
-        a data problem. Fix: only do the network fetch + PIL decode
-        (Image.open/thumbnail) in the worker thread; defer the actual
-        ImageTk.PhotoImage() construction to _apply_thumbnail, which
-        already runs on the main thread via root.after(0, ...).
+    def _open_preview_popup(self, item: SelectableItem):
         """
+        Open a Toplevel window showing the full preview gallery for an
+        item, plus its cleaned description text. Purely informational --
+        no install action from here. Multiple popups can be open at
+        once (one per item clicked), each is fully independent.
+        """
+        popup = Toplevel(self.root)
+        popup.title(item.entry.name)
+        popup.geometry("680x560")
+        popup.minsize(600, 500)
+        popup.update_idletasks()  # force the window to actually render
+                                  # before grab_set() -- calling grab on
+                                  # a not-yet-viewable window raises
+                                  # TclError: grab failed: window not viewable
+        popup.grab_set()
+
+        # Header
+        header = Frame(popup, padx=16, pady=12)
+        header.pack(fill=X)
+        Label(
+            header, text=item.entry.name, font=("", 13, "bold"), anchor=W
+        ).pack(anchor=W)
+        Label(
+            header, text=item.entry.typename, fg="#666", anchor=W
+        ).pack(anchor=W)
+
+        # Image gallery -- horizontally scrollable strip of previews
+        gallery_outer = Frame(popup, padx=16)
+        gallery_outer.pack(fill=X)
+
+        gallery_canvas = Canvas(gallery_outer, height=220, highlightthickness=0)
+        h_scrollbar = Scrollbar(
+            gallery_outer, orient="horizontal", command=gallery_canvas.xview
+        )
+        gallery_frame = Frame(gallery_canvas)
+        gallery_frame.bind(
+            "<Configure>",
+            lambda e: gallery_canvas.configure(
+                scrollregion=gallery_canvas.bbox("all")
+            ),
+        )
+        gallery_canvas.create_window((0, 0), window=gallery_frame, anchor=NW)
+        gallery_canvas.configure(xscrollcommand=h_scrollbar.set)
+        gallery_canvas.pack(fill=X)
+        h_scrollbar.pack(fill=X)
+
+        # Placeholder labels -- one per preview image URL -- images
+        # load async and swap in as they arrive.
+        PREVIEW_SIZE = (300, 200)
+        popup._preview_images = []  # keep PhotoImage refs alive on the popup
+
+        for i, url in enumerate(item.entry.preview_image_urls):
+            placeholder = Label(
+                gallery_frame, width=38, height=12, bg="#ddd",
+                text=f"Loading {i+1}...", compound="center", fg="#999",
+            )
+            placeholder.pack(side=LEFT, padx=4, pady=4)
+            self._load_preview_image_async(url, placeholder, popup, PREVIEW_SIZE)
+
+        if not item.entry.preview_image_urls:
+            Label(
+                gallery_frame, text="No preview images available.",
+                fg="#888", padx=8, pady=8,
+            ).pack(side=LEFT)
+
+        # Description (HTML-stripped)
+        if item.entry.description_html:
+            desc_frame = Frame(popup, padx=16)
+            desc_frame.pack(fill=BOTH, expand=True, pady=(0, 8))
+            Label(
+                desc_frame, text="Description", font=("", 10, "bold"), anchor=W
+            ).pack(anchor=W, pady=(8, 4))
+            desc_text = Text(
+                desc_frame, wrap=WORD, height=8,
+                relief="flat", bg=popup.cget("bg"),
+            )
+            desc_text.pack(fill=BOTH, expand=True)
+            cleaned = self._strip_html(item.entry.description_html)
+            desc_text.insert(END, cleaned)
+            desc_text.configure(state=DISABLED)
+
+        # Footer
+        footer = Frame(popup, padx=16, pady=12)
+        footer.pack(fill=X)
+        store_url = item.entry.homepage or f"https://store.kde.org/p/{item.entry.content_id}"
+        Button(
+            footer, text="View on Store",
+            command=lambda u=store_url: webbrowser.open(u),
+        ).pack(side=LEFT)
+        Button(
+            footer, text="Close", command=popup.destroy
+        ).pack(side=RIGHT)
+
+    def _load_preview_image_async(
+        self,
+        url: str,
+        label_widget: Label,
+        popup: Toplevel,
+        size: tuple[int, int],
+    ):
+        """Load a single preview gallery image off-thread. Same
+        threading-safety rules apply as for all Tkinter image loading:
+        PIL decode in the worker, PhotoImage construction on the main
+        thread (see _apply_preview_image)."""
         if not PIL_AVAILABLE:
+            label_widget.configure(text="(PIL not installed)", fg="#a00")
             return
 
         def worker():
             try:
                 import requests
-                resp = requests.get(item.entry.primary_preview_url, timeout=10)
+                import io
+                resp = requests.get(url, timeout=15)
                 if resp.status_code != 200:
                     return
-                import io
                 image = Image.open(io.BytesIO(resp.content))
-                image.thumbnail(THUMBNAIL_DISPLAY_SIZE)
-                image.load()  # force full decode now, while still off the
-                               # main thread -- Image.open() is lazy and
-                               # without this, the actual pixel decode
-                               # could otherwise be deferred to whenever
-                               # PhotoImage touches it on the main thread
+                image.thumbnail(size)
+                image.load()
             except Exception:
                 return
-            self.root.after(0, self._apply_thumbnail, item, label_widget, image)
+            self.root.after(
+                0, self._apply_preview_image, image, label_widget, popup
+            )
 
         threading.Thread(target=worker, daemon=True).start()
 
-    def _apply_thumbnail(self, item: SelectableItem, label_widget: Label, pil_image):
-        # PhotoImage construction happens HERE, on the main thread --
-        # see the threading-safety note in _load_thumbnail_async.
+    def _apply_preview_image(
+        self,
+        pil_image,
+        label_widget: Label,
+        popup: Toplevel,
+    ):
+        """Apply a loaded preview image to its placeholder label.
+        PhotoImage constructed here on the main thread -- Tk is not
+        thread-safe and PhotoImage must never be created off the main
+        thread, even if it looks like "just creating an object"."""
+        if not self._widget_exists(popup) or not self._widget_exists(label_widget):
+            return  # popup was closed before the image finished loading
         try:
             photo = ImageTk.PhotoImage(pil_image)
+            popup._preview_images.append(photo)  # keep reference alive
+            label_widget.configure(
+                image=photo, text="", width=pil_image.width, height=pil_image.height
+            )
         except Exception:
-            return  # widget may have been destroyed, or image data was bad
+            pass
 
-        item.thumbnail_image = photo  # keep a reference, Tk needs this to persist
-        try:
-            label_widget.configure(image=photo, width=THUMBNAIL_DISPLAY_SIZE[0], bg=None)
-        except Exception:
-            pass  # widget may have been destroyed if the user navigated away
+    @staticmethod
+    def _strip_html(html: str) -> str:
+        """Very lightweight HTML tag stripper for description display.
+        We don't need a full parser here -- just remove tags and
+        decode the most common HTML entities, then collapse whitespace
+        into something readable."""
+        import re
+        # Replace block-level tags with newlines before stripping
+        text = re.sub(r"<br\s*/?>", "\n", html, flags=re.IGNORECASE)
+        text = re.sub(r"</(p|div|li|h[1-6])>", "\n", text, flags=re.IGNORECASE)
+        # Strip remaining tags
+        text = re.sub(r"<[^>]+>", "", text)
+        # Decode common entities
+        text = (text
+                .replace("&amp;", "&")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&quot;", '"')
+                .replace("&#39;", "'")
+                .replace("&nbsp;", " "))
+        # Collapse runs of blank lines and trim
+        text = re.sub(r"\n{3,}", "\n\n", text)
+        return text.strip()
 
     # ---- Screen 3: progress ---------------------------------------------------
 
@@ -728,8 +859,8 @@ class App:
 def main():
     if not PIL_AVAILABLE:
         print(
-            "Note: Pillow (PIL) isn't installed -- thumbnails won't be "
-            "shown in the selection screen, but everything else will "
+            "Note: Pillow (PIL) isn't installed -- preview images won't be "
+            "shown in the item preview popup, but everything else will "
             "still work. Install it with: pip install Pillow --user"
         )
     root = Tk()
