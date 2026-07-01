@@ -35,6 +35,8 @@ import ocs_client
 
 BUCKET_AUTO_INSTALL = "auto_install"
 BUCKET_DOWNLOAD_ONLY = "download_only"  # v2 install support not built yet
+BUCKET_INCOMPATIBLE = "incompatible"    # wrong platform/version -- never install
+                                        # or download, just warn the user
 BUCKET_UNKNOWN = "unknown"
 
 TYPEID_BUCKETS: dict[str, str] = {
@@ -52,6 +54,18 @@ TYPEID_BUCKETS: dict[str, str] = {
     "101": BUCKET_DOWNLOAD_ONLY,  # SDDM Login Themes
     "135": BUCKET_DOWNLOAD_ONLY,  # GTK3/4 Themes
     "123": BUCKET_DOWNLOAD_ONLY,  # Kvantum
+    "121": BUCKET_INCOMPATIBLE,   # Global Themes (Plasma 5) -- incompatible
+                                  # with Plasma 6; never install or download
+    "114": BUCKET_INCOMPATIBLE,   # Plasma Window Decorations (Plasma 5 Aurorae)
+                                  # -- distinct from typeid 717 (Plasma 6
+                                  # Window Decorations) which IS supported
+    "488": BUCKET_INCOMPATIBLE,   # Plasma Splashscreens (Plasma 5) -- distinct
+                                  # from typeid 716 (Plasma 6 Splashscreens)
+                                  # which IS supported
+    # Note: typeid 101 (SDDM Login Themes) is shared between Plasma 5
+    # and Plasma 6 SDDM themes -- the OCS API doesn't distinguish them.
+    # Left as BUCKET_DOWNLOAD_ONLY; user should verify compatibility
+    # manually before installing from the downloads folder.
 }
 
 # Cursor theme and font typeids are not yet confirmed (see design doc

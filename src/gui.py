@@ -70,6 +70,7 @@ class SelectableItem:
         self.label = label
         self.bucket = bucket
         is_auto = bucket == companion_finder.BUCKET_AUTO_INSTALL
+        self.is_incompatible = bucket == companion_finder.BUCKET_INCOMPATIBLE
         self.install_var = IntVar(value=1 if is_auto else 0)
         self.is_editable = is_auto
         self.thumbnail_image = None  # populated later if/when loaded
@@ -396,7 +397,13 @@ class App:
             text_frame, text=item.entry.typename, fg="#666", anchor=W
         ).pack(anchor=W)
 
-        if not item.is_editable:
+        if item.is_incompatible:
+            Label(
+                text_frame,
+                text="⚠ Incompatible with Plasma 6 -- will not be downloaded or installed.",
+                fg="#a00", anchor=W,
+            ).pack(anchor=W)
+        elif not item.is_editable:
             Label(
                 text_frame,
                 text="Download only -- automatic install not yet supported for this type.",
@@ -532,6 +539,15 @@ class App:
         for item in self.selectable_items:
             entry = item.entry
             should_install = bool(item.install_var.get()) and item.is_editable
+
+            if item.is_incompatible:
+                progress("skipping", f"{item.label} ({entry.typename}) -- incompatible with Plasma 6")
+                outcomes.append(pipeline.ItemOutcome(
+                    content_id=entry.content_id, name=entry.name,
+                    typeid=entry.typeid, typename=entry.typename,
+                    label=item.label, bucket=item.bucket, fetch_succeeded=False,
+                ))
+                continue
 
             progress("downloading", f"{item.label} ({entry.typename})")
             outcome = pipeline.ItemOutcome(

@@ -107,6 +107,13 @@ class PipelineResult:
         ]
 
     @property
+    def incompatible_items(self) -> list[ItemOutcome]:
+        return [
+            i for i in self.all_items
+            if i.bucket == companion_finder.BUCKET_INCOMPATIBLE
+        ]
+
+    @property
     def unknown_type_items(self) -> list[ItemOutcome]:
         return [
             i for i in self.all_items
@@ -139,6 +146,14 @@ def _process_item(
         bucket=bucket,
         fetch_succeeded=False,
     )
+
+    # Incompatible items (e.g. Plasma 5 themes on a Plasma 6 system)
+    # are not downloaded at all -- there's no point fetching files we
+    # can never use, and doing so would silently waste bandwidth and
+    # fill the cache folder with content that will never be installed.
+    if bucket == companion_finder.BUCKET_INCOMPATIBLE:
+        progress("skipping", f"{entry.name} ({entry.typename}) -- incompatible with Plasma 6")
+        return outcome
 
     progress("downloading", f"{entry.name} ({entry.typename})")
     try:
@@ -278,6 +293,17 @@ def format_summary(result: PipelineResult) -> str:
             lines.append(
                 f"  \"{item.name}\" ({item.typename}) "
                 f"-> files at {item.cache_dir}/extracted/"
+            )
+
+    incompatible = result.incompatible_items
+    if incompatible:
+        lines.append("")
+        lines.append("=== Skipped -- incompatible with Plasma 6 ===")
+        for item in incompatible:
+            lines.append(
+                f"  \"{item.name}\" ({item.typename}) "
+                f"-- not downloaded; Plasma 5 content cannot be installed "
+                f"on a Plasma 6 system"
             )
 
     unknown = result.unknown_type_items
