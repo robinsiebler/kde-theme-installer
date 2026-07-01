@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kde-theme-installer"
+version = "0.1.0"
+description = "Install KDE Store themes and their companions with one click"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "Robin Siebler" }]
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.28.0",
+    "beautifulsoup4>=4.11.0",
+    "Pillow>=9.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "requests>=2.28.0",
+    "beautifulsoup4>=4.11.0",
+    "Pillow>=9.0.0",
+]
+
+[project.scripts]
+kde-theme-installer = "kde_theme_installer.gui:main"
+
+[project.urls]
+Homepage = "https://github.com/robinsiebler/kde-theme-installer"
+Repository = "https://github.com/robinsiebler/kde-theme-installer"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["kde_theme_installer*"]
+
+[tool.setuptools.package-data]
+kde_theme_installer = ["py.typed"]

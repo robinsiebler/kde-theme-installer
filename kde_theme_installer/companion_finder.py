@@ -22,7 +22,7 @@ from typing import Optional
 
 from bs4 import BeautifulSoup
 
-import ocs_client
+from . import ocs_client
 
 
 # --- Type bucket classification -------------------------------------------

@@ -28,9 +28,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-import ocs_client
-import fetch_and_extract
-import companion_finder
+from . import ocs_client
+from . import fetch_and_extract
+from . import companion_finder
 
 
 class InstallError(Exception):

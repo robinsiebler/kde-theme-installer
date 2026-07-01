@@ -37,7 +37,7 @@ from typing import Optional
 
 import requests
 
-import ocs_client
+from . import ocs_client
 
 
 DOWNLOAD_CHUNK_SIZE = 1024 * 256  # 256 KB

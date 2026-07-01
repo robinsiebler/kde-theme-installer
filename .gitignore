@@ -4,8 +4,16 @@ __pycache__/
 .venv/
 venv/
 
+# Python packaging build artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+
 # Local test cache created by tests/smoke_test_fetch_and_extract.py
 test_cache/
+test_fake_xdg_data_home/
+fake_config_home/
 
 # Real downloaded/extracted theme content if run from the project root
 cache/
