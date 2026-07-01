@@ -288,12 +288,22 @@ def format_summary(result: PipelineResult) -> str:
     download_only = result.download_only_items
     if download_only:
         lines.append("")
-        lines.append("=== Downloaded but not installed (v2 feature) ===")
+        lines.append("=== Downloaded but not installed ===")
         for item in download_only:
             lines.append(
-                f"  \"{item.name}\" ({item.typename}) "
-                f"-> files at {item.cache_dir}/extracted/"
+                f"  \"{item.name}\" ({item.typename})"
+                f" -> files at {item.cache_dir}/extracted/"
             )
+            if item.typeid == "101":  # SDDM
+                lines.append(
+                    f"     To install: python3 scripts/install_sddm_theme.py "
+                    f"{item.cache_dir}/extracted/{item.name}"
+                )
+            elif item.typeid == "135":  # GTK
+                lines.append(
+                    f"     To install manually: copy the extracted folder to "
+                    f"~/.local/share/themes/ or ~/.themes/"
+                )
 
     incompatible = result.incompatible_items
     if incompatible:
